@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Vật Lí Vũ Trụ: Đại Chiến Bầy Gà Mobile</title>
+    <title>KHTN 9: Năng Lượng Vũ Trụ</title>
     <style>
         body {
             margin: 0;
@@ -16,7 +16,6 @@
             justify-content: center;
             align-items: center;
             height: 100vh;
-            /* Ngăn các hành vi cuộn, zoom mặc định của điện thoại */
             touch-action: none; 
             -webkit-touch-callout: none;
             -webkit-user-select: none;
@@ -27,7 +26,7 @@
             position: relative;
             width: 100vw;
             height: 100vh;
-            max-width: 500px; /* Giới hạn chiều rộng trên màn hình lớn */
+            max-width: 500px;
             max-height: 850px;
             background: radial-gradient(circle at center, #111432 0%, #04040c 100%);
             border: 2px solid #4a4e69;
@@ -62,7 +61,6 @@
             height: 100%;
         }
 
-        /* Giao diện câu hỏi tối ưu cho Mobile */
         #quiz-overlay {
             position: absolute;
             top: 0;
@@ -90,21 +88,25 @@
         }
 
         #danger-desc {
-            color: #94a3b8;
-            font-size: 12px;
+            color: #e2e8f0;
+            font-size: 13px;
             margin-bottom: 20px;
+            background: #991b1b;
+            padding: 4px 10px;
+            border-radius: 4px;
         }
 
         #question-box {
             background: #1e1b4b;
-            border: 1px solid #4338ca;
-            padding: 15px;
+            border: 2px solid #4338ca;
+            padding: 18px;
             border-radius: 8px;
             font-size: 15px;
-            line-height: 1.5;
+            line-height: 1.6;
             margin-bottom: 20px;
             width: 100%;
             box-sizing: border-box;
+            text-align: left;
         }
 
         .answers-grid {
@@ -155,8 +157,8 @@
         <canvas id="spaceCanvas"></canvas>
 
         <div id="quiz-overlay">
-            <div id="danger-title">🚀 PHI THUYỀN BỊ TRÚNG ĐẠN!</div>
-            <div id="danger-desc">Giải mã hiện tượng Vật lí để kích hoạt khiên hồi sinh</div>
+            <div id="danger-title">⚡ NĂNG LƯỢNG SUY GIẢM!</div>
+            <div id="danger-desc">Giải bài toán Cơ học KHTN 9 để tái tạo màng chắn bảo vệ</div>
             <div id="question-box">Đang tải...</div>
             <div class="answers-grid">
                 <button class="answer-card" onclick="submitAnswer(0)">Đáp án A</button>
@@ -166,14 +168,13 @@
             </div>
         </div>
 
-        <div id="controls-guide">Chạm và vuốt để di chuyển phi thuyền (Tự động bắn)</div>
+        <div id="controls-guide">Chạm & Vuốt để lái phi thuyền (Trứng rơi x2 kịch tính!)</div>
     </div>
 
     <script>
         const canvas = document.getElementById('spaceCanvas');
         const ctx = canvas.getContext('2d');
 
-        // Khởi tạo kích thước cố định cho logic game, canvas tự scale bằng CSS
         const WIDTH = 480;
         const HEIGHT = 800;
         canvas.width = WIDTH;
@@ -185,26 +186,28 @@
         let isQuizMode = false;
         let selectedQuiz = null;
         let lastShotTime = 0;
-        const SHOT_DELAY = 250; // Tốc độ bắn tự động (ms)
+        const SHOT_DELAY = 220; // Tốc độ bắn tự động tối ưu hóa nhanh hơn một chút
 
+        // Ngân hàng câu hỏi KHTN Lớp 9 chuyên sâu: Động năng - Thế năng - Cơ năng
         const physicsQuestionBank = [
-            { q: "Khi một con gà vũ trụ thả một quả trứng từ độ cao h xuống (bỏ qua sức cản không khí), chuyển động của quả trứng tuân theo quy luật nào?", a: ["Chuyển động thẳng đều", "Chuyển động rơi tự do biến đổi đều", "Chuyển động chậm dần đều", "Chuyển động cong đều"], c: 1 },
-            { q: "Tia laser màu đỏ phát ra từ phi thuyền của bạn thực chất có bản chất là gì?", a: ["Dòng các hạt electron", "Sóng cơ học tần số cao", "Sóng điện từ có bước sóng xác định", "Dòng các hạt neutron"], c: 2 },
-            { q: "Nếu phi thuyền đang chuyển động thẳng đều với vận tốc v, tổng hợp tất cả các lực tác dụng lên phi thuyền bằng bao nhiêu?", a: ["Bằng 0", "Bằng m.v", "Bằng hằng số lớn hơn 0", "Tỷ lệ thuận với thời gian"], c: 0 },
-            { q: "Hiện tượng nào giải thích tại sao ánh sáng chói từ tinh vân vũ trụ bị giảm đi khi nhìn qua kính bảo hộ phân cực?", a: ["Hiện tượng khúc xạ ánh sáng", "Hiện tượng giao thoa ánh sáng", "Hiện tượng tán sắc ánh sáng", "Hiện tượng phân cực ánh sáng"], c: 3 },
-            { q: "Động năng của viên đạn năng lượng bắn ra từ phi thuyền phụ thuộc vào những đại lượng nào?", a: ["Khối lượng viên đạn và gia tốc g", "Khối lượng và vận tốc của viên đạn", "Vận tốc viên đạn và thời gian bay", "Ly độ và tần số góc"], c: 1 }
+            { q: "Đại lượng nào sau đây đại diện cho năng lượng mà một vật có được do nó đang chuyển động?", a: ["Thế năng trọng trường", "Động năng", "Thế năng đàn hồi", "Cơ năng"], c: 1 },
+            { q: "Một vật có khối lượng m đang chuyển động với vận tốc v. Công thức tính động năng (Wđ) của vật là:", a: ["Wđ = m.v", "Wđ = m.g.h", "Wđ = 1/2 m.v²", "Wđ = 1/2 m.v"], c: 2 },
+            { q: "Khi một quả trứng rơi từ trên cao xuống, trong quá trình rơi (bỏ qua ma sát), sự chuyển hóa năng lượng nào xảy ra?", a: ["Động năng chuyển hóa thành thế năng", "Thế năng chuyển hóa thành động năng", "Cơ năng chuyển hóa thành thế năng", "Cơ năng tăng dần"], c: 1 },
+            { q: "Thế năng trọng trường của một vật phụ thuộc vào những yếu tố nào?", a: ["Khối lượng và vận tốc của vật", "Vận tốc và độ cao của vật", "Khối lượng vật và độ cao của vật so với mốc", "Hình dạng và thể tích của vật"], c: 2 },
+            { q: "Một vật nặng 2 kg được đặt ở độ cao h = 5m so với mặt đất. Lấy g = 10 m/s². Thế năng trọng trường của vật bằng bao nhiêu?", a: ["10 J", "50 J", "100 J", "20 J"], c: 2 },
+            { q: "Nếu một phi thuyền tăng vận tốc chuyển động lên gấp đôi (2 lần) thì động năng của phi thuyền sẽ tăng lên bao nhiêu lần?", a: ["2 lần", "4 lần", "8 lần", "Không đổi"], c: 1 },
+            { q: "Phát biểu nào sau đây đúng về cơ năng của một vật?", a: ["Cơ năng bằng hiệu giữa động năng và thế năng", "Cơ năng là tổng của động năng và thế năng", "Cơ năng luôn luôn bị tiêu diệt hoàn toàn", "Cơ năng chỉ phụ thuộc vào vận tốc vật"], c: 1 },
+            { q: "Khi một vật đạt độ cao cực đại (vận tốc bằng 0) trong quá trình ném thẳng đứng lên cao, lúc này vật có:", a: ["Động năng cực đại, thế năng bằng 0", "Động năng bằng thế năng", "Thế năng cực đại, động năng bằng 0", "Cơ năng bằng 0"], c: 2 }
         ];
 
         const player = { x: WIDTH / 2, y: HEIGHT - 80, width: 50, height: 40 };
         let bullets = []; let chickens = []; let eggs = []; let particles = [];
 
-        // --- HỖ TRỢ ĐIỀU KHIỂN CẢM ỨNG (TOUCH) ---
         function handleTouch(e) {
             if (isQuizMode) return;
             e.preventDefault();
             const rect = canvas.getBoundingClientRect();
             const touch = e.touches[0];
-            // Tính toán tỷ lệ scale giữa kích thước thực tế hiển thị và kích thước logic canvas
             const scaleX = WIDTH / rect.width;
             const touchX = (touch.clientX - rect.left) * scaleX;
             player.x = Math.max(player.width/2, Math.min(WIDTH - player.width/2, touchX));
@@ -213,7 +216,6 @@
         canvas.addEventListener('touchstart', handleTouch, {passive: false});
         canvas.addEventListener('touchmove', handleTouch, {passive: false});
 
-        // Hỗ trợ cả chuột trên máy tính để test nhanh
         canvas.addEventListener('mousemove', (e) => {
             if (isQuizMode) return;
             const rect = canvas.getBoundingClientRect();
@@ -232,8 +234,9 @@
                     chickens.push({
                         x: startX + c * spacingX, y: startY + r * spacingY,
                         width: 36, height: 32, direction: 1,
-                        speed: 1.2 + (wave * 0.3),
-                        dropChance: 0.002 + (wave * 0.001)
+                        speed: 1.2 + (wave * 0.25),
+                        // YÊU CẦU: Tăng gấp đôi tần suất đẻ trứng (0.004 thay vì 0.002)
+                        dropChance: 0.004 + (wave * 0.002) 
                     });
                 }
             }
@@ -252,10 +255,9 @@
         function update() {
             if (isQuizMode) return;
 
-            // Tự động bắn đạn theo chu kỳ thời gian (Vì trên mobile vuốt tay không click liên tục được)
             let currentTime = Date.now();
             if (currentTime - lastShotTime > SHOT_DELAY) {
-                bullets.push({ x: player.x, y: player.y - 20, speed: 10, radius: 3 });
+                bullets.push({ x: player.x, y: player.y - 20, speed: 11, radius: 3 });
                 lastShotTime = currentTime;
             }
 
@@ -268,7 +270,7 @@
             chickens.forEach(chick => {
                 chick.x += chick.speed * chick.direction;
                 if (chick.x + chick.width/2 > WIDTH - 15 || chick.x - chick.width/2 < 15) shiftDown = true;
-                if (Math.random() < chick.dropChance) eggs.push({ x: chick.x, y: chick.y + 10, vy: 2, gravity: 0.08 });
+                if (Math.random() < chick.dropChance) eggs.push({ x: chick.x, y: chick.y + 10, vy: 1.5, gravity: 0.09 });
             });
 
             if (shiftDown) {
@@ -327,7 +329,7 @@
                 setTimeout(() => { resumeGame(false); }, 1000);
             } else {
                 buttons[index].classList.add('wrong'); buttons[selectedQuiz.c].classList.add('correct');
-                setTimeout(() => { resumeGame(true); }, 1800);
+                setTimeout(() => { resumeGame(true); }, 2000);
             }
         }
 
@@ -335,7 +337,7 @@
             if (deductLife) {
                 lives--;
                 if(lives <= 0) {
-                    alert(`GAME OVER! Điểm của bạn: ${score}`);
+                    alert(`TRẬN ĐẤU KẾT THÚC! Bạn đạt được: ${score} điểm.`);
                     score = 0; lives = 3; wave = 1;
                     document.getElementById('score-value').innerText = score;
                     document.getElementById('wave-value').innerText = wave;
