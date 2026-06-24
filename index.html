@@ -61,6 +61,61 @@
             height: 100%;
         }
 
+        /* Menu Bắt đầu / Chuyển ván */
+        #menu-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(5, 5, 15, 0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 150;
+            padding: 30px;
+            box-sizing: border-box;
+            text-align: center;
+        }
+
+        #menu-title {
+            font-size: 28px;
+            font-weight: 800;
+            color: #38bdf8;
+            margin-bottom: 10px;
+            text-shadow: 0 0 15px rgba(56, 189, 248, 0.6);
+        }
+
+        #menu-report {
+            font-size: 16px;
+            color: #cbd5e1;
+            margin-bottom: 30px;
+            line-height: 1.6;
+            background: rgba(30, 41, 59, 0.5);
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #334155;
+            width: 80%;
+        }
+
+        .primary-btn {
+            background: linear-gradient(135deg, #38bdf8 0%, #0369a1 100%);
+            border: none;
+            color: white;
+            padding: 14px 32px;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 30px;
+            cursor: pointer;
+            box-shadow: 0 0 20px rgba(56, 189, 248, 0.4);
+            transition: transform 0.2s;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .primary-btn:active { transform: scale(0.95); }
+
+        /* Giao diện câu hỏi cứu hộ */
         #quiz-overlay {
             position: absolute;
             top: 0;
@@ -87,13 +142,28 @@
             margin-bottom: 5px;
         }
 
-        #danger-desc {
-            color: #e2e8f0;
-            font-size: 13px;
-            margin-bottom: 20px;
-            background: #991b1b;
-            padding: 4px 10px;
-            border-radius: 4px;
+        /* Thanh thời gian đếm ngược 45s */
+        #timer-container {
+            width: 100%;
+            background-color: #334155;
+            height: 6px;
+            border-radius: 3px;
+            margin-bottom: 15px;
+            overflow: hidden;
+        }
+
+        #timer-bar {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #eab308, #ef4444);
+            transition: width 0.1s linear;
+        }
+
+        #timer-text {
+            font-size: 14px;
+            color: #eab308;
+            font-weight: bold;
+            margin-bottom: 15px;
         }
 
         #question-box {
@@ -154,11 +224,20 @@
             <div class="hud-item"><div class="hud-label">Ván</div><div id="wave-value" class="hud-value">1</div></div>
         </div>
 
+        <div id="menu-overlay">
+            <div id="menu-title">NĂNG LƯỢNG VŨ TRỤ KHTN 9</div>
+            <div id="menu-report">Chào mừng bạn đến với thử thách Cơ học! Tránh né bầy gà tinh vân và giải mã các bài toán để bảo vệ Trái Đất.</div>
+            <button id="start-btn" class="primary-btn" onclick="startNextWave()">BẮT ĐẦU VÁN 1</button>
+        </div>
+
         <canvas id="spaceCanvas"></canvas>
 
         <div id="quiz-overlay">
             <div id="danger-title">⚡ NĂNG LƯỢNG SUY GIẢM!</div>
-            <div id="danger-desc">Giải bài toán Cơ học KHTN 9 để tái tạo màng chắn bảo vệ</div>
+            
+            <div id="timer-container"><div id="timer-bar"></div></div>
+            <div id="timer-text">Thời gian còn lại: 45s</div>
+
             <div id="question-box">Đang tải...</div>
             <div class="answers-grid">
                 <button class="answer-card" onclick="submitAnswer(0)">Đáp án A</button>
@@ -184,11 +263,16 @@
         let lives = 3;
         let wave = 1;
         let isQuizMode = false;
+        let isMenuMode = true; // Trạng thái màn hình chờ ban đầu
         let selectedQuiz = null;
         let lastShotTime = 0;
         const SHOT_DELAY = 220;
 
-        // Ngân hàng 30 câu hỏi KHTN 9 chuyên sâu không lặp lại
+        // Logic đếm ngược 45 giây
+        let quizTimer = null;
+        let timeRemaining = 45;
+        const QUIZ_TIME_LIMIT = 45; 
+
         const physicsQuestionBank = [
             { q: "Động năng của một vật là năng lượng vật có được do yếu tố nào?", a: ["Vật có khối lượng lớn", "Vật đang ở trên cao", "Vật đang chuyển động", "Vật bị biến dạng"], c: 2 },
             { q: "Công thức toán học nào sau đây dùng để tính động năng của một vật?", a: ["Wđ = m.v", "Wđ = m.g.h", "Wđ = 1/2 m.v²", "Wđ = 1/2 m.v"], c: 2 },
@@ -224,10 +308,10 @@
 
         const player = { x: WIDTH / 2, y: HEIGHT - 80, width: 50, height: 40 };
         let bullets = []; let chickens = []; let eggs = []; let particles = [];
-        let localQuestionBank = [...physicsQuestionBank]; // Tạo bản sao để loại trừ câu đã hỏi
+        let localQuestionBank = [...physicsQuestionBank];
 
         function handleTouch(e) {
-            if (isQuizMode) return;
+            if (isQuizMode || isMenuMode) return;
             e.preventDefault();
             const rect = canvas.getBoundingClientRect();
             const touch = e.touches[0];
@@ -240,11 +324,36 @@
         canvas.addEventListener('touchmove', handleTouch, {passive: false});
 
         canvas.addEventListener('mousemove', (e) => {
-            if (isQuizMode) return;
+            if (isQuizMode || isMenuMode) return;
             const rect = canvas.getBoundingClientRect();
             const scaleX = WIDTH / rect.width;
             player.x = Math.max(player.width/2, Math.min(WIDTH - player.width/2, (e.clientX - rect.left) * scaleX));
         });
+
+        // Hàm kích hoạt màn chơi mới từ màn hình Chờ
+        function startNextWave() {
+            isMenuMode = false;
+            document.getElementById('menu-overlay').style.display = 'none';
+            spawnChickenFleet();
+        }
+
+        function triggerWaveComplete() {
+            isMenuMode = true;
+            bullets = []; eggs = [];
+            
+            document.getElementById('menu-title').innerText = `🎉 HOÀN THÀNH VÁN ${wave}!`;
+            document.getElementById('menu-report').innerHTML = `
+                <b>BÁO CÁO KẾT QUẢ TRẬN ĐẤU:</b><br><br>
+                - Ván đấu vừa qua: Ván ${wave}<br>
+                - Điểm số hiện tại: <span style="color:#38bdf8; font-size:18px;">${score} điểm</span><br>
+                - Số mạng còn lại: ${'❤️'.repeat(lives)}<br><br>
+                <i>Hệ thống gà chiến ván tiếp theo sẽ được nhân đôi tốc độ và đẻ trứng nhanh hơn! Sẵn sàng chưa?</i>
+            `;
+            wave++;
+            document.getElementById('wave-value').innerText = wave;
+            document.getElementById('start-btn').innerText = `BẮT ĐẦU VÁN ${wave}`;
+            document.getElementById('menu-overlay').style.display = 'flex';
+        }
 
         function spawnChickenFleet() {
             chickens = []; eggs = [];
@@ -258,7 +367,7 @@
                         x: startX + c * spacingX, y: startY + r * spacingY,
                         width: 36, height: 32, direction: 1,
                         speed: 1.2 + (wave * 0.25),
-                        dropChance: 0.004 + (wave * 0.002) // Trứng rơi dày gấp đôi kịch tính
+                        dropChance: 0.004 + (wave * 0.002) 
                     });
                 }
             }
@@ -275,7 +384,7 @@
         }
 
         function update() {
-            if (isQuizMode) return;
+            if (isQuizMode || isMenuMode) return;
 
             let currentTime = Date.now();
             if (currentTime - lastShotTime > SHOT_DELAY) {
@@ -326,7 +435,11 @@
                 if(particles[p].alpha <= 0) particles.splice(p, 1);
             }
 
-            if (chickens.length === 0) { wave++; document.getElementById('wave-value').innerText = wave; spawnChickenFleet(); }
+            // Kết thúc ván đấu -> Chuyển sang màn hình báo cáo kết quả
+            if (chickens.length === 0) { 
+                triggerWaveComplete(); 
+            }
+            
             chickens.forEach(chick => { if (chick.y + chick.height/2 > player.y - player.height/2) triggerPlayerHit(); });
         }
 
@@ -334,12 +447,8 @@
             createExplosion(player.x, player.y, '#ef4444');
             isQuizMode = true;
 
-            // Reset ngân hàng nếu đã hết câu hỏi
-            if (localQuestionBank.length === 0) {
-                localQuestionBank = [...physicsQuestionBank];
-            }
+            if (localQuestionBank.length === 0) localQuestionBank = [...physicsQuestionBank];
 
-            // Bốc ngẫu nhiên 1 câu và xóa nó khỏi danh sách local tránh trùng lặp
             const randomIndex = Math.floor(Math.random() * localQuestionBank.length);
             selectedQuiz = localQuestionBank.splice(randomIndex, 1)[0];
 
@@ -349,12 +458,45 @@
                 btn.innerText = `${String.fromCharCode(65 + index)}. ${selectedQuiz.a[index]}`;
                 btn.className = 'answer-card'; btn.style.pointerEvents = 'auto';
             });
+
+            // Khởi động bộ đếm thời gian 45 giây
+            timeRemaining = QUIZ_TIME_LIMIT;
+            updateTimerUI();
             document.getElementById('quiz-overlay').classList.add('active');
+
+            quizTimer = setInterval(() => {
+                timeRemaining--;
+                updateTimerUI();
+
+                if (timeRemaining <= 0) {
+                    clearInterval(quizTimer);
+                    handleTimeOut(); // Xử lý khi hết giờ
+                }
+            }, 1000);
+        }
+
+        function updateTimerUI() {
+            document.getElementById('timer-text').innerText = `Thời gian còn lại: ${timeRemaining}s`;
+            const percentage = (timeRemaining / QUIZ_TIME_LIMIT) * 100;
+            document.getElementById('timer-bar').style.width = `${percentage}%`;
+        }
+
+        // Xử lý khi học sinh bị hết 45 giây suy nghĩ
+        function handleTimeOut() {
+            const buttons = document.querySelectorAll('.answer-card');
+            buttons.forEach(btn => btn.style.pointerEvents = 'none');
+            buttons[selectedQuiz.c].classList.add('correct'); // Hiện đáp án đúng
+            
+            setTimeout(() => {
+                resumeGame(true); // Trừ 1 mạng
+            }, 2000);
         }
 
         function submitAnswer(index) {
+            clearInterval(quizTimer); // Dừng đếm ngược ngay khi bấm chọn
             const buttons = document.querySelectorAll('.answer-card');
             buttons.forEach(btn => btn.style.pointerEvents = 'none');
+            
             if (index === selectedQuiz.c) {
                 buttons[index].classList.add('correct');
                 setTimeout(() => { resumeGame(false); }, 1000);
@@ -370,10 +512,16 @@
                 if(lives <= 0) {
                     alert(`TRẬN ĐẤU KẾT THÚC! Bạn đạt được: ${score} điểm.`);
                     score = 0; lives = 3; wave = 1;
-                    localQuestionBank = [...physicsQuestionBank]; // Reset lại ngân hàng câu hỏi khi làm ván mới
+                    localQuestionBank = [...physicsQuestionBank];
                     document.getElementById('score-value').innerText = score;
                     document.getElementById('wave-value').innerText = wave;
-                    spawnChickenFleet();
+                    
+                    // Quay về màn hình chờ ban đầu
+                    isMenuMode = true;
+                    document.getElementById('menu-title').innerText = "NĂNG LƯỢNG VŨ TRỤ KHTN 9";
+                    document.getElementById('menu-report').innerText = "Chào mừng bạn đến với thử thách Cơ học! Tránh né bầy gà tinh vân và giải mã các bài toán để bảo vệ Trái Đất.";
+                    document.getElementById('start-btn').innerText = "BẮT ĐẦU VÁN 1";
+                    document.getElementById('menu-overlay').style.display = 'flex';
                 }
             }
             document.getElementById('lives-value').innerText = `❤️ ${lives}`;
@@ -390,7 +538,7 @@
                 ctx.fillRect(starX, starY, 2, 2);
             }
 
-            if (!isQuizMode) {
+            if (!isQuizMode && !isMenuMode) {
                 ctx.save(); ctx.translate(player.x, player.y);
                 let fireH = 8 + Math.random() * 8;
                 let grad = ctx.createLinearGradient(0, 12, 0, 12 + fireH);
@@ -428,8 +576,7 @@
         }
 
         function mainLoop() { update(); draw(); requestAnimationFrame(mainLoop); }
-        spawnChickenFleet();
-        mainLoop();
+        mainLoop(); // Chỉ chạy vòng lặp, màn hình chờ sẽ quản lý việc bắt đầu
     </script>
 </body>
 </html>
