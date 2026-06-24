@@ -186,22 +186,45 @@
         let isQuizMode = false;
         let selectedQuiz = null;
         let lastShotTime = 0;
-        const SHOT_DELAY = 220; // Tốc độ bắn tự động tối ưu hóa nhanh hơn một chút
+        const SHOT_DELAY = 220;
 
-        // Ngân hàng câu hỏi KHTN Lớp 9 chuyên sâu: Động năng - Thế năng - Cơ năng
+        // Ngân hàng 30 câu hỏi KHTN 9 chuyên sâu không lặp lại
         const physicsQuestionBank = [
-            { q: "Đại lượng nào sau đây đại diện cho năng lượng mà một vật có được do nó đang chuyển động?", a: ["Thế năng trọng trường", "Động năng", "Thế năng đàn hồi", "Cơ năng"], c: 1 },
-            { q: "Một vật có khối lượng m đang chuyển động với vận tốc v. Công thức tính động năng (Wđ) của vật là:", a: ["Wđ = m.v", "Wđ = m.g.h", "Wđ = 1/2 m.v²", "Wđ = 1/2 m.v"], c: 2 },
-            { q: "Khi một quả trứng rơi từ trên cao xuống, trong quá trình rơi (bỏ qua ma sát), sự chuyển hóa năng lượng nào xảy ra?", a: ["Động năng chuyển hóa thành thế năng", "Thế năng chuyển hóa thành động năng", "Cơ năng chuyển hóa thành thế năng", "Cơ năng tăng dần"], c: 1 },
-            { q: "Thế năng trọng trường của một vật phụ thuộc vào những yếu tố nào?", a: ["Khối lượng và vận tốc của vật", "Vận tốc và độ cao của vật", "Khối lượng vật và độ cao của vật so với mốc", "Hình dạng và thể tích của vật"], c: 2 },
-            { q: "Một vật nặng 2 kg được đặt ở độ cao h = 5m so với mặt đất. Lấy g = 10 m/s². Thế năng trọng trường của vật bằng bao nhiêu?", a: ["10 J", "50 J", "100 J", "20 J"], c: 2 },
-            { q: "Nếu một phi thuyền tăng vận tốc chuyển động lên gấp đôi (2 lần) thì động năng của phi thuyền sẽ tăng lên bao nhiêu lần?", a: ["2 lần", "4 lần", "8 lần", "Không đổi"], c: 1 },
-            { q: "Phát biểu nào sau đây đúng về cơ năng của một vật?", a: ["Cơ năng bằng hiệu giữa động năng và thế năng", "Cơ năng là tổng của động năng và thế năng", "Cơ năng luôn luôn bị tiêu diệt hoàn toàn", "Cơ năng chỉ phụ thuộc vào vận tốc vật"], c: 1 },
-            { q: "Khi một vật đạt độ cao cực đại (vận tốc bằng 0) trong quá trình ném thẳng đứng lên cao, lúc này vật có:", a: ["Động năng cực đại, thế năng bằng 0", "Động năng bằng thế năng", "Thế năng cực đại, động năng bằng 0", "Cơ năng bằng 0"], c: 2 }
+            { q: "Động năng của một vật là năng lượng vật có được do yếu tố nào?", a: ["Vật có khối lượng lớn", "Vật đang ở trên cao", "Vật đang chuyển động", "Vật bị biến dạng"], c: 2 },
+            { q: "Công thức toán học nào sau đây dùng để tính động năng của một vật?", a: ["Wđ = m.v", "Wđ = m.g.h", "Wđ = 1/2 m.v²", "Wđ = 1/2 m.v"], c: 2 },
+            { q: "In công thức tính động năng, vận tốc của vật được đo bằng đơn vị nào sau đây?", a: ["km/h", "m/s", "m/s²", "cm/s"], c: 1 },
+            { q: "Nếu khối lượng của một vật tăng lên 2 lần và vận tốc giữ nguyên thì động năng của vật thay đổi thế nào?", a: ["Tăng 2 lần", "Tăng 4 lần", "Giảm 2 lần", "Không đổi"], c: 0 },
+            { q: "Một chiếc xe máy và một chiếc xe tải cùng chạy với vận tốc 40 km/h. Xe nào có động năng lớn hơn?", a: ["Xe máy vì nhỏ gọn hơn", "Xe tải vì có khối lượng lớn hơn", "Hai xe có động năng bằng nhau", "Không so sánh được"], c: 1 },
+            { q: "Đơn vị chính thống nào sau đây dùng để đo động năng, thế năng và cơ năng?", a: ["Oát (W)", "Niutơn (N)", "Jun (J)", "Mã lực (HP)"], c: 2 },
+            { q: "Khi một vật đang đứng yên thì động năng của vật đó bằng bao nhiêu?", a: ["Bằng 0", "Bằng giá trị thế năng", "Bằng hằng số lớn hơn 0", "Cực đại"], c: 0 },
+            { q: "Một bạn học sinh có khối lượng 40 kg đang chạy với vận tốc 2 m/s. Động năng của bạn đó là bao nhiêu?", a: ["40 J", "80 J", "160 J", "20 J"], c: 1 },
+            { q: "Một viên đạn năng lượng có khối lượng 0,1 kg bay với vận tốc 10 m/s. Động năng của viên đạn là:", a: ["1 J", "5 J", "0.5 J", "10 J"], c: 2 },
+            { q: "Khi một vật chuyển động chậm dần đều do ma sát, động năng của vật sẽ biến đổi thế nào?", a: ["Tăng dần", "Giảm dần", "Không thay đổi", "Bằng thế năng"], c: 1 },
+            { q: "Thế năng trọng trường của một vật là năng lượng có được do:", a: ["Vật đang chuyển động nhanh", "Vị trí của vật so với mặt đất (hoặc mốc chọn)", "Vật bị nén hoặc kéo dãn", "Nhiệt độ của vật tăng cao"], c: 1 },
+            { q: "Công thức tính thế năng trọng trường của một vật ở độ cao h là gì?", a: ["Wt = m.v", "Wt = 1/2 m.v²", "Wt = m.g.h", "Wt = 1/2 m.g.h"], c: 2 },
+            { q: "Thế năng trọng trường của một vật phụ thuộc vào những đại lượng nào?", a: ["Khối lượng và vận tốc", "Khối lượng và độ cao", "Vận tốc và độ cao", "Kích thước của vật"], c: 1 },
+            { q: "Nếu chọn mặt đất làm mốc tính thế năng, một vật nằm ngay trên mặt đất sẽ có thế năng bằng bao nhiêu?", a: ["Bằng 0", "Cực đại", "Nhỏ hơn 0", "Chưa xác định được"], c: 0 },
+            { q: "Một quả dừa có khối lượng 1 kg đang ở trên cây cách mặt đất 6m. Lấy g = 10 m/s². Thế năng của quả dừa là:", a: ["6 J", "16 J", "60 J", "600 J"], c: 2 },
+            { q: "Hai vật có khối lượng m1 > m2 được đặt ở cùng một độ cao so với mặt đất. Vật nào có thế năng lớn hơn?", a: ["Vật 1", "Vật 2", "Hai vật bằng nhau", "Không thể so sánh"], c: 0 },
+            { q: "Khi đưa một vật lên độ cao lớn hơn so với mốc thế năng, thế năng trọng trường của vật sẽ:", a: ["Giảm đi", "Tăng lên", "Không thay đổi", "Bằng 0"], c: 1 },
+            { q: "Đại lượng 'h' trong công thức thế năng trọng trường Wt = mgh được gọi là gì?", a: ["Vận tốc của vật", "Khối lượng của vật", "Độ cao của vật so với mốc", "Gia tốc rơi tự do"], c: 2 },
+            { q: "Một thùng hàng nặng 10 kg đặt trên tầng lửng cao 2m so với sàn nhà (chọn sàn làm mốc). Lấy g=10m/s², thế năng của thùng là:", a: ["20 J", "100 J", "200 J", "2000 J"], c: 2 },
+            { q: "Thế năng trọng trường sẽ thay đổi thế nào nếu ta chọn mốc thế năng ở vị trí cao hơn vị trí vật?", a: ["Thế năng sẽ có giá trị âm (<0)", "Thế năng sẽ bằng 0", "Thế năng tăng gấp đôi", "Thế năng luôn dương"], c: 0 },
+            { q: "Cơ năng của một vật chuyển động trong trọng trường được tính bằng biểu thức nào?", a: ["Tổng động năng và thế năng", "Hiệu giữa động năng và thế năng", "Tích của động năng và thế năng", "Thương của động năng và thế năng"], c: 0 },
+            { q: "Khi một quả trứng gà rơi tự do từ trên cao xuống đất, dạng năng lượng nào đã chuyển hóa thành dạng nào?", a: ["Động năng chuyển hóa thành thế năng", "Thế năng chuyển hóa thành động năng", "Cơ năng chuyển hóa thành động năng", "Nhiệt năng chuyển hóa thành thế năng"], c: 1 },
+            { q: "Nếu bỏ qua mọi lực cản và ma sát, cơ năng của một vật trong quá trình chuyển động sẽ:", a: ["Luôn tăng dần", "Luôn giảm dần", "Được bảo toàn (không đổi)", "Bằng 0"], c: 2 },
+            { q: "Trong quá trình ném một viên sỏi thẳng đứng từ dưới lên cao, động năng và thế năng thay đổi thế nào?", a: ["Động năng tăng, thế năng giảm", "Động năng giảm, thế năng tăng", "Cả hai cùng tăng", "Cả hai cùng giảm"], c: 1 },
+            { q: "Tại vị trí cao nhất mà vật đạt được khi được ném thẳng đứng lên cao (vận tốc v = 0) thì:", a: ["Động năng cực đại, thế năng bằng 0", "Thế năng cực đại, động năng bằng 0", "Cơ năng của vật bằng 0", "Động năng bằng thế năng"], c: 1 },
+            { q: "Một vật có động năng là 40 J và thế năng là 60 J. Cơ năng toàn phần của vật đó bằng bao nhiêu?", a: ["20 J", "100 J", "2400 J", "50 J"], c: 1 },
+            { q: "Khi một vật vừa chạm đất (mốc thế năng), năng lượng của vật tồn tại chủ yếu dưới dạng nào?", a: ["Thế năng trọng trường cực đại", "Động năng cực đại", "Cơ năng bằng 0", "Hóa năng"], c: 1 },
+            { q: "Hiện tượng cơ năng chuyển hóa một phần thành nhiệt năng trong thực tế thường do yếu tố nào gây ra?", a: ["Lực trọng trường", "Lực ma sát, lực cản không khí", "Khối lượng vật quá lớn", "Vận tốc vật quá nhanh"], c: 1 },
+            { q: "Một mũi tên được bắn ra từ một chiếc cung đã kéo căng. Năng lượng ban đầu của chiếc cung tồn tại dưới dạng nào?", a: ["Động năng", "Thế năng đàn hồi", "Thế năng trọng trường", "Cơ năng chuyển động"], c: 1 },
+            { q: "Nếu một vật rơi từ trên cao xuống và cơ năng được bảo toàn, khi thế năng giảm đi 15 J thì động năng sẽ:", a: ["Giảm đi 15 J", "Tăng thêm 15 J", "Tăng thêm 30 J", "Không thay đổi"], c: 1 }
         ];
 
         const player = { x: WIDTH / 2, y: HEIGHT - 80, width: 50, height: 40 };
         let bullets = []; let chickens = []; let eggs = []; let particles = [];
+        let localQuestionBank = [...physicsQuestionBank]; // Tạo bản sao để loại trừ câu đã hỏi
 
         function handleTouch(e) {
             if (isQuizMode) return;
@@ -235,8 +258,7 @@
                         x: startX + c * spacingX, y: startY + r * spacingY,
                         width: 36, height: 32, direction: 1,
                         speed: 1.2 + (wave * 0.25),
-                        // YÊU CẦU: Tăng gấp đôi tần suất đẻ trứng (0.004 thay vì 0.002)
-                        dropChance: 0.004 + (wave * 0.002) 
+                        dropChance: 0.004 + (wave * 0.002) // Trứng rơi dày gấp đôi kịch tính
                     });
                 }
             }
@@ -311,7 +333,16 @@
         function triggerPlayerHit() {
             createExplosion(player.x, player.y, '#ef4444');
             isQuizMode = true;
-            selectedQuiz = physicsQuestionBank[Math.floor(Math.random() * physicsQuestionBank.length)];
+
+            // Reset ngân hàng nếu đã hết câu hỏi
+            if (localQuestionBank.length === 0) {
+                localQuestionBank = [...physicsQuestionBank];
+            }
+
+            // Bốc ngẫu nhiên 1 câu và xóa nó khỏi danh sách local tránh trùng lặp
+            const randomIndex = Math.floor(Math.random() * localQuestionBank.length);
+            selectedQuiz = localQuestionBank.splice(randomIndex, 1)[0];
+
             document.getElementById('question-box').innerText = selectedQuiz.q;
             const buttons = document.querySelectorAll('.answer-card');
             buttons.forEach((btn, index) => {
@@ -339,6 +370,7 @@
                 if(lives <= 0) {
                     alert(`TRẬN ĐẤU KẾT THÚC! Bạn đạt được: ${score} điểm.`);
                     score = 0; lives = 3; wave = 1;
+                    localQuestionBank = [...physicsQuestionBank]; // Reset lại ngân hàng câu hỏi khi làm ván mới
                     document.getElementById('score-value').innerText = score;
                     document.getElementById('wave-value').innerText = wave;
                     spawnChickenFleet();
