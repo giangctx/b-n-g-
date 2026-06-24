@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Vật Lí Vũ Trụ: Đại Chiến Bầy Gà Mobile</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #050510;
+            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            /* Ngăn các hành vi cuộn, zoom mặc định của điện thoại */
+            touch-action: none; 
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            max-width: 500px; /* Giới hạn chiều rộng trên màn hình lớn */
+            max-height: 850px;
+            background: radial-gradient(circle at center, #111432 0%, #04040c 100%);
+            border: 2px solid #4a4e69;
+            box-shadow: 0 0 40px rgba(74, 78, 105, 0.4);
+        }
+
+        #hud {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            display: flex;
+            justify-content: space-between;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .hud-item {
+            background: rgba(15, 23, 42, 0.7);
+            padding: 6px 12px;
+            border-radius: 6px;
+            border: 1px solid #334155;
+        }
+
+        .hud-label { font-size: 10px; color: #94a3b8; text-transform: uppercase; }
+        .hud-value { font-size: 16px; font-weight: bold; color: #38bdf8; }
+        #lives-value { color: #f43f5e; }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Giao diện câu hỏi tối ưu cho Mobile */
+        #quiz-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(3, 7, 18, 0.95);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            padding: 20px;
+            box-sizing: border-box;
+            text-align: center;
+        }
+
+        #quiz-overlay.active { display: flex; }
+
+        #danger-title {
+            color: #ef4444;
+            font-size: 24px;
+            font-weight: 800;
+            margin-bottom: 5px;
+        }
+
+        #danger-desc {
+            color: #94a3b8;
+            font-size: 12px;
+            margin-bottom: 20px;
+        }
+
+        #question-box {
+            background: #1e1b4b;
+            border: 1px solid #4338ca;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 15px;
+            line-height: 1.5;
+            margin-bottom: 20px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .answers-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            width: 100%;
+        }
+
+        .answer-card {
+            background: #111827;
+            border: 1px solid #374151;
+            color: #e5e7eb;
+            padding: 14px;
+            font-size: 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            text-align: left;
+            width: 100%;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .answer-card.correct { background-color: #065f46 !important; border-color: #10b981 !important; }
+        .answer-card.wrong { background-color: #991b1b !important; border-color: #ef4444 !important; }
+
+        #controls-guide {
+            position: absolute;
+            bottom: 8px;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            font-size: 11px;
+            color: #4b5563;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <div id="hud">
+            <div class="hud-item"><div class="hud-label">Điểm</div><div id="score-value" class="hud-value">0</div></div>
+            <div class="hud-item"><div class="hud-label">Mạng</div><div id="lives-value" class="hud-value">❤️ 3</div></div>
+            <div class="hud-item"><div class="hud-label">Ván</div><div id="wave-value" class="hud-value">1</div></div>
+        </div>
+
+        <canvas id="spaceCanvas"></canvas>
+
+        <div id="quiz-overlay">
+            <div id="danger-title">🚀 PHI THUYỀN BỊ TRÚNG ĐẠN!</div>
+            <div id="danger-desc">Giải mã hiện tượng Vật lí để kích hoạt khiên hồi sinh</div>
+            <div id="question-box">Đang tải...</div>
+            <div class="answers-grid">
+                <button class="answer-card" onclick="submitAnswer(0)">Đáp án A</button>
+                <button class="answer-card" onclick="submitAnswer(1)">Đáp án B</button>
+                <button class="answer-card" onclick="submitAnswer(2)">Đáp án C</button>
+                <button class="answer-card" onclick="submitAnswer(3)">Đáp án D</button>
+            </div>
+        </div>
+
+        <div id="controls-guide">Chạm và vuốt để di chuyển phi thuyền (Tự động bắn)</div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('spaceCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Khởi tạo kích thước cố định cho logic game, canvas tự scale bằng CSS
+        const WIDTH = 480;
+        const HEIGHT = 800;
+        canvas.width = WIDTH;
+        canvas.height = HEIGHT;
+
+        let score = 0;
+        let lives = 3;
+        let wave = 1;
+        let isQuizMode = false;
+        let selectedQuiz = null;
+        let lastShotTime = 0;
+        const SHOT_DELAY = 250; // Tốc độ bắn tự động (ms)
+
+        const physicsQuestionBank = [
+            { q: "Khi một con gà vũ trụ thả một quả trứng từ độ cao h xuống (bỏ qua sức cản không khí), chuyển động của quả trứng tuân theo quy luật nào?", a: ["Chuyển động thẳng đều", "Chuyển động rơi tự do biến đổi đều", "Chuyển động chậm dần đều", "Chuyển động cong đều"], c: 1 },
+            { q: "Tia laser màu đỏ phát ra từ phi thuyền của bạn thực chất có bản chất là gì?", a: ["Dòng các hạt electron", "Sóng cơ học tần số cao", "Sóng điện từ có bước sóng xác định", "Dòng các hạt neutron"], c: 2 },
+            { q: "Nếu phi thuyền đang chuyển động thẳng đều với vận tốc v, tổng hợp tất cả các lực tác dụng lên phi thuyền bằng bao nhiêu?", a: ["Bằng 0", "Bằng m.v", "Bằng hằng số lớn hơn 0", "Tỷ lệ thuận với thời gian"], c: 0 },
+            { q: "Hiện tượng nào giải thích tại sao ánh sáng chói từ tinh vân vũ trụ bị giảm đi khi nhìn qua kính bảo hộ phân cực?", a: ["Hiện tượng khúc xạ ánh sáng", "Hiện tượng giao thoa ánh sáng", "Hiện tượng tán sắc ánh sáng", "Hiện tượng phân cực ánh sáng"], c: 3 },
+            { q: "Động năng của viên đạn năng lượng bắn ra từ phi thuyền phụ thuộc vào những đại lượng nào?", a: ["Khối lượng viên đạn và gia tốc g", "Khối lượng và vận tốc của viên đạn", "Vận tốc viên đạn và thời gian bay", "Ly độ và tần số góc"], c: 1 }
+        ];
+
+        const player = { x: WIDTH / 2, y: HEIGHT - 80, width: 50, height: 40 };
+        let bullets = []; let chickens = []; let eggs = []; let particles = [];
+
+        // --- HỖ TRỢ ĐIỀU KHIỂN CẢM ỨNG (TOUCH) ---
+        function handleTouch(e) {
+            if (isQuizMode) return;
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const touch = e.touches[0];
+            // Tính toán tỷ lệ scale giữa kích thước thực tế hiển thị và kích thước logic canvas
+            const scaleX = WIDTH / rect.width;
+            const touchX = (touch.clientX - rect.left) * scaleX;
+            player.x = Math.max(player.width/2, Math.min(WIDTH - player.width/2, touchX));
+        }
+
+        canvas.addEventListener('touchstart', handleTouch, {passive: false});
+        canvas.addEventListener('touchmove', handleTouch, {passive: false});
+
+        // Hỗ trợ cả chuột trên máy tính để test nhanh
+        canvas.addEventListener('mousemove', (e) => {
+            if (isQuizMode) return;
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = WIDTH / rect.width;
+            player.x = Math.max(player.width/2, Math.min(WIDTH - player.width/2, (e.clientX - rect.left) * scaleX));
+        });
+
+        function spawnChickenFleet() {
+            chickens = []; eggs = [];
+            const rows = 4; const cols = 6;
+            const startX = 55; const startY = 90;
+            const spacingX = 70; const spacingY = 55;
+
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    chickens.push({
+                        x: startX + c * spacingX, y: startY + r * spacingY,
+                        width: 36, height: 32, direction: 1,
+                        speed: 1.2 + (wave * 0.3),
+                        dropChance: 0.002 + (wave * 0.001)
+                    });
+                }
+            }
+        }
+
+        function createExplosion(x, y, color) {
+            for(let i=0; i<10; i++) {
+                particles.push({
+                    x: x, y: y,
+                    vx: (Math.random() - 0.5) * 5, vy: (Math.random() - 0.5) * 5,
+                    radius: Math.random() * 2 + 1, alpha: 1, color: color
+                });
+            }
+        }
+
+        function update() {
+            if (isQuizMode) return;
+
+            // Tự động bắn đạn theo chu kỳ thời gian (Vì trên mobile vuốt tay không click liên tục được)
+            let currentTime = Date.now();
+            if (currentTime - lastShotTime > SHOT_DELAY) {
+                bullets.push({ x: player.x, y: player.y - 20, speed: 10, radius: 3 });
+                lastShotTime = currentTime;
+            }
+
+            for (let b = bullets.length - 1; b >= 0; b--) {
+                bullets[b].y -= bullets[b].speed;
+                if (bullets[b].y < 0) bullets.splice(b, 1);
+            }
+
+            let shiftDown = false;
+            chickens.forEach(chick => {
+                chick.x += chick.speed * chick.direction;
+                if (chick.x + chick.width/2 > WIDTH - 15 || chick.x - chick.width/2 < 15) shiftDown = true;
+                if (Math.random() < chick.dropChance) eggs.push({ x: chick.x, y: chick.y + 10, vy: 2, gravity: 0.08 });
+            });
+
+            if (shiftDown) {
+                chickens.forEach(chick => { chick.direction *= -1; chick.y += 15; });
+            }
+
+            for (let e = eggs.length - 1; e >= 0; e--) {
+                eggs[e].vy += eggs[e].gravity;
+                eggs[e].y += eggs[e].vy;
+                if (eggs[e].y > HEIGHT) { eggs.splice(e, 1); continue; }
+
+                if (Math.abs(eggs[e].x - player.x) < player.width/2 + 5 && Math.abs(eggs[e].y - player.y) < player.height/2 + 6) {
+                    eggs.splice(e, 1); triggerPlayerHit();
+                }
+            }
+
+            for (let b = bullets.length - 1; b >= 0; b--) {
+                for (let c = chickens.length - 1; c >= 0; c--) {
+                    if (Math.abs(bullets[b].x - chickens[c].x) < chickens[c].width/2 && Math.abs(bullets[b].y - chickens[c].y) < chickens[c].height/2) {
+                        createExplosion(chickens[c].x, chickens[c].y, '#10b981');
+                        chickens.splice(c, 1); bullets.splice(b, 1);
+                        score += 50; document.getElementById('score-value').innerText = score;
+                        break;
+                    }
+                }
+            }
+
+            for(let p = particles.length - 1; p >= 0; p--) {
+                particles[p].x += particles[p].vx; particles[p].y += particles[p].vy;
+                particles[p].alpha -= 0.02;
+                if(particles[p].alpha <= 0) particles.splice(p, 1);
+            }
+
+            if (chickens.length === 0) { wave++; document.getElementById('wave-value').innerText = wave; spawnChickenFleet(); }
+            chickens.forEach(chick => { if (chick.y + chick.height/2 > player.y - player.height/2) triggerPlayerHit(); });
+        }
+
+        function triggerPlayerHit() {
+            createExplosion(player.x, player.y, '#ef4444');
+            isQuizMode = true;
+            selectedQuiz = physicsQuestionBank[Math.floor(Math.random() * physicsQuestionBank.length)];
+            document.getElementById('question-box').innerText = selectedQuiz.q;
+            const buttons = document.querySelectorAll('.answer-card');
+            buttons.forEach((btn, index) => {
+                btn.innerText = `${String.fromCharCode(65 + index)}. ${selectedQuiz.a[index]}`;
+                btn.className = 'answer-card'; btn.style.pointerEvents = 'auto';
+            });
+            document.getElementById('quiz-overlay').classList.add('active');
+        }
+
+        function submitAnswer(index) {
+            const buttons = document.querySelectorAll('.answer-card');
+            buttons.forEach(btn => btn.style.pointerEvents = 'none');
+            if (index === selectedQuiz.c) {
+                buttons[index].classList.add('correct');
+                setTimeout(() => { resumeGame(false); }, 1000);
+            } else {
+                buttons[index].classList.add('wrong'); buttons[selectedQuiz.c].classList.add('correct');
+                setTimeout(() => { resumeGame(true); }, 1800);
+            }
+        }
+
+        function resumeGame(deductLife) {
+            if (deductLife) {
+                lives--;
+                if(lives <= 0) {
+                    alert(`GAME OVER! Điểm của bạn: ${score}`);
+                    score = 0; lives = 3; wave = 1;
+                    document.getElementById('score-value').innerText = score;
+                    document.getElementById('wave-value').innerText = wave;
+                    spawnChickenFleet();
+                }
+            }
+            document.getElementById('lives-value').innerText = `❤️ ${lives}`;
+            document.getElementById('quiz-overlay').classList.remove('active');
+            eggs = []; isQuizMode = false;
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, WIDTH, HEIGHT);
+            ctx.fillStyle = "rgba(255, 255, 255, 0.2)";
+            for (let i = 0; i < 20; i++) {
+                let starX = (Math.sin(i * 99) + 1) * 0.5 * WIDTH;
+                let starY = ((Date.now() * 0.04 + i * 60) % HEIGHT);
+                ctx.fillRect(starX, starY, 2, 2);
+            }
+
+            if (!isQuizMode) {
+                ctx.save(); ctx.translate(player.x, player.y);
+                let fireH = 8 + Math.random() * 8;
+                let grad = ctx.createLinearGradient(0, 12, 0, 12 + fireH);
+                grad.addColorStop(0, '#f97316'); grad.addColorStop(1, 'rgba(239, 68, 68, 0)');
+                ctx.fillStyle = grad; ctx.fillRect(-5, 12, 10, fireH);
+                ctx.fillStyle = '#cbd5e1'; ctx.beginPath(); ctx.moveTo(0, -15); ctx.lineTo(16, 12); ctx.lineTo(-16, 12); ctx.closePath(); ctx.fill();
+                ctx.fillStyle = '#0ea5e9'; ctx.fillRect(-20, 4, 6, 8); ctx.fillRect(14, 4, 6, 8);
+                ctx.fillStyle = '#38bdf8'; ctx.beginPath(); ctx.arc(0, 0, 5, 0, Math.PI * 2); ctx.fill();
+                ctx.restore();
+            }
+
+            chickens.forEach(chick => {
+                ctx.save(); ctx.translate(chick.x, chick.y);
+                let wing = Math.sin(Date.now() * 0.01 + chick.x) * 6;
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath(); ctx.ellipse(-14, 0, 8, 5 + wing/2, Math.PI/4, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.ellipse(14, 0, 8, 5 + wing/2, -Math.PI/4, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = '#22c55e'; ctx.beginPath(); ctx.arc(0, 2, 11, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#ef4444'; ctx.beginPath(); ctx.arc(0, -9, 5, 0, Math.PI * 2); ctx.fill(); ctx.fillRect(-2, -15, 4, 5);
+                ctx.fillStyle = '#eab308'; ctx.beginPath(); ctx.moveTo(0, -8); ctx.lineTo(-3, -5); ctx.lineTo(3, -5); ctx.closePath(); ctx.fill();
+                ctx.restore();
+            });
+
+            ctx.fillStyle = '#f8fafc';
+            eggs.forEach(egg => {
+                ctx.save(); ctx.translate(egg.x, egg.y); ctx.beginPath(); ctx.ellipse(0, 0, 5, 7, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+            });
+
+            ctx.fillStyle = '#f43f5e';
+            bullets.forEach(b => { ctx.beginPath(); ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2); ctx.fill(); });
+
+            particles.forEach(p => {
+                ctx.save(); ctx.globalAlpha = p.alpha; ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+            });
+        }
+
+        function mainLoop() { update(); draw(); requestAnimationFrame(mainLoop); }
+        spawnChickenFleet();
+        mainLoop();
+    </script>
+</body>
+</html>
