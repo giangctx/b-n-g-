@@ -227,7 +227,7 @@
 
         <div id="menu-overlay">
             <div id="menu-title">NĂNG LƯỢNG VŨ TRỤ KHTN 9</div>
-            <div id="menu-report">Chào mừng bạn đến với thử thách Cơ học! Tránh né bầy gà tinh vân và giải mã các bài toán để bảo vệ Trái Đất.</div>
+            <div id="menu-report">Chào mừng bạn đến với cuộc chiến với bầy gà tinh ranh, giải mã các bài toán để vượt qua thử thách nhé.</div>
             <button id="start-btn" class="primary-btn" onclick="startNextWave()">BẮT ĐẦU CHẶNG 1</button>
         </div>
 
@@ -237,7 +237,7 @@
             <div id="danger-title">⚡ NĂNG LƯỢNG SUY GIẢM!</div>
             
             <div id="timer-container"><div id="timer-bar"></div></div>
-            <div id="timer-text">Thời gian còn lại: 45s</div>
+            <div id="timer-text">Thời gian còn lại: 30s</div>
 
             <div id="question-box">Đang tải...</div>
             <div class="answers-grid">
@@ -260,9 +260,8 @@
         canvas.width = WIDTH;
         canvas.height = HEIGHT;
 
-        // Trạng thái các biến số hệ thống game
         let score = 0;
-        let lives = 5; // YÊU CẦU: Khởi tạo 5 mạng sống
+        let lives = 5; 
         let wave = 1;
         let isQuizMode = false;
         let isMenuMode = true;
@@ -277,20 +276,17 @@
         let wrongAnswersCount = 0;
         let totalQuestionsAnswered = 0;
 
-        // Biến hiệu ứng chữ nổi +50đ
         let scorePopups = [];
 
-        // Logic đếm ngược 45 giây câu hỏi
+        // Logic đếm ngược 30 giây câu hỏi (YÊU CẦU MỚI)
         let quizTimer = null;
-        let timeRemaining = 45;
-        const QUIZ_TIME_LIMIT = 45;
+        let timeRemaining = 30;
+        const QUIZ_TIME_LIMIT = 30;
 
-        // Bộ synthesizer âm thanh (Web Audio API không cần file ngoài)
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
         function playExplosionSound() {
             try {
-                // Giúp giả lập tiếng nổ "Bùm" trầm ấm bằng nhiễu âm tần số thấp
                 let bufferSize = audioCtx.sampleRate * 0.4,
                     buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate),
                     data = buffer.getChannelData(0);
@@ -337,7 +333,7 @@
             { q: "Nếu bỏ qua mọi lực cản và ma sát, cơ năng của một vật trong quá trình chuyển động sẽ:", a: ["Luôn tăng dần", "Luôn giảm dần", "Được bảo toàn (không đổi)", "Bằng 0"], c: 2 },
             { q: "Trong quá trình ném một viên sỏi thẳng đứng từ dưới lên cao, động năng và thế năng thay đổi thế nào?", a: ["Động năng tăng, thế năng giảm", "Động năng giảm, thế năng tăng", "Cả hai cùng tăng", "Cả hai cùng giảm"], c: 1 },
             { q: "Tại vị trí cao nhất mà vật đạt được khi được ném thẳng đứng lên cao (vận tốc v = 0) thì:", a: ["Động năng cực đại, thế năng bằng 0", "Thế năng cực đại, động năng bằng 0", "Cơ năng của vật bằng 0", "Động năng bằng thế năng"], c: 1 },
-            { q: "Một vật có động năng là 40 J và thế năng là 60 J. Cơ năng toàn phần của vật đó bằng bao nhiêu?", a: ["20 J", "100 J", "2400 J", "50 J"], c: 1 },
+            { q: "Một vật có động năng là 40 J and thế năng là 60 J. Cơ năng toàn phần của vật đó bằng bao nhiêu?", a: ["20 J", "100 J", "2400 J", "50 J"], c: 1 },
             { q: "Khi một vật vừa chạm đất (mốc thế năng), năng lượng của vật tồn tại chủ yếu dưới dạng nào?", a: ["Thế năng trọng trường cực đại", "Động năng cực đại", "Cơ năng bằng 0", "Hóa năng"], c: 1 },
             { q: "Hiện tượng cơ năng chuyển hóa một phần thành nhiệt năng trong thực tế thường do yếu tố nào gây ra?", a: ["Lực trọng trường", "Lực ma sát, lực cản không khí", "Khối lượng vật quá lớn", "Vận tốc vật quá nhanh"], c: 1 },
             { q: "Một mũi tên được bắn ra từ một chiếc cung đã kéo căng. Năng lượng ban đầu của chiếc cung tồn tại dưới dạng nào?", a: ["Động năng", "Thế năng đàn hồi", "Thế năng trọng trường", "Cơ năng chuyển động"], c: 1 },
@@ -370,7 +366,7 @@
 
         function startNextWave() {
             if (audioCtx.state === 'suspended') audioCtx.resume();
-            if (gameStartTime === 0) gameStartTime = Date.now(); // Ghi nhận thời gian bắt đầu chơi thực tế
+            if (gameStartTime === 0) gameStartTime = Date.now(); 
             
             isMenuMode = false;
             document.getElementById('menu-overlay').style.display = 'none';
@@ -383,20 +379,17 @@
             return `${m} phút ${s} giây`;
         }
 
+        // Báo cáo giữa các chặng: CHỈ HIỂN THỊ ĐIỂM VÀ MẠNG (YÊU CẦU MỚI)
         function triggerWaveComplete() {
             isMenuMode = true;
             bullets = []; eggs = [];
-            totalElapsedSeconds = (Date.now() - gameStartTime) / 1000;
 
             document.getElementById('menu-title').innerText = `🎉 HOÀN THÀNH CHẶNG ${wave}!`;
             document.getElementById('menu-report').innerHTML = `
-                <b>BÁO CÁO TIẾN ĐỘ THỰC HIỆN:</b><br><br>
-                - Số chặng đã vượt qua: <b>Chặng ${wave}</b><br>
-                - Tổng điểm tích lũy: <span style="color:#38bdf8;">${score} điểm</span><br>
-                - Tổng thời gian đã chơi: <b>${formatTime(totalElapsedSeconds)}</b><br>
-                - Số câu trả lời ĐÚNG: <span style="color:#10b981;">${correctAnswersCount} câu</span><br>
-                - Số câu trả lời SAI: <span style="color:#ef4444;">${wrongAnswersCount} câu</span><br>
-                - Số mạng còn lại: ${'❤️'.repeat(lives)}
+                - Bạn vừa vượt qua: <b>Chặng ${wave}</b><br>
+                - Điểm số hiện tại: <span style="color:#38bdf8; font-weight:bold;">${score} điểm</span><br>
+                - Số mạng còn lại: ${'❤️'.repeat(lives)}<br><br>
+                <i>Nhấn nút bên dưới để tiến vào chặng tiếp theo với tốc độ thử thách cao hơn!</i>
             `;
             wave++;
             document.getElementById('wave-value').innerText = wave;
@@ -404,6 +397,7 @@
             document.getElementById('menu-overlay').style.display = 'flex';
         }
 
+        // Báo cáo TRANG CUỐI CÙNG: HIỂN THỊ ĐẦY ĐỦ THÔNG SỐ ĐÚNG/SAI/THỜI GIAN
         function triggerGameOver(isUltimateWin = false) {
             clearInterval(quizTimer);
             isMenuMode = true;
@@ -417,15 +411,15 @@
 
             document.getElementById('menu-report').innerHTML = `
                 <b style="color:#eab308; font-size:15px;">BÁO CÁO TỔNG KẾT TOÀN DIỆN:</b><br><br>
-                - Số chặng hoàn thành: <b>${wave - 1} chặng</b><br>
+                - Số chặng đã vượt qua: <b>${wave - 1} chặng</b><br>
                 - Tổng số điểm đạt được: <span style="color:#38bdf8; font-size:16px; font-weight:bold;">${score} điểm</span><br>
                 - Tổng thời gian tham gia: <b>${formatTime(totalElapsedSeconds)}</b><br><br>
                 - Tổng số câu đã tương tác: <b>${totalQuestionsAnswered} câu</b><br>
-                - Trả lời ĐÚNG: <span style="color:#10b981; font-weight:bold;">${correctAnswersCount} câu</span><br>
-                - Trả lời SAI: <span style="color:#ef4444; font-weight:bold;">${wrongAnswersCount} câu</span>
+                - Bạn đã trả lời ĐÚNG: <span style="color:#10b981; font-weight:bold;">${correctAnswersCount} câu</span><br>
+                - Bạn đã trả lời SAI: <span style="color:#ef4444; font-weight:bold;">${wrongAnswersCount} câu</span>
             `;
 
-            // Reset toàn bộ chỉ số cho lần chơi tiếp theo
+            // Reset toàn bộ chỉ số cho lượt chơi mới
             score = 0; lives = 5; wave = 1;
             correctAnswersCount = 0; wrongAnswersCount = 0; totalQuestionsAnswered = 0;
             gameStartTime = 0;
@@ -496,10 +490,9 @@
                 eggs[e].y += eggs[e].vy;
                 if (eggs[e].y > HEIGHT) { eggs.splice(e, 1); continue; }
 
-                // Khi quả trứng va chạm trúng máy bay người chơi
                 if (Math.abs(eggs[e].x - player.x) < player.width/2 + 5 && Math.abs(eggs[e].y - player.y) < player.height/2 + 6) {
                     eggs.splice(e, 1);
-                    playExplosionSound(); // YÊU CẦU: Kêu bùm khi máy bay nổ
+                    playExplosionSound(); 
                     triggerPlayerHit();
                 }
             }
@@ -509,7 +502,7 @@
                     if (Math.abs(bullets[b].x - chickens[c].x) < chickens[c].width/2 && Math.abs(bullets[b].y - chickens[c].y) < chickens[c].height/2) {
                         createExplosion(chickens[c].x, chickens[c].y, '#10b981');
                         chickens.splice(c, 1); bullets.splice(b, 1);
-                        score += 20; // Bắn hạ mỗi con gà cộng 20đ nền
+                        score += 20; 
                         document.getElementById('score-value').innerText = score;
                         break;
                     }
@@ -522,7 +515,6 @@
                 if(particles[p].alpha <= 0) particles.splice(p, 1);
             }
 
-            // Xử lý chữ nổi +50đ bay lên
             for (let s = scorePopups.length - 1; s >= 0; s--) {
                 scorePopups[s].y -= 1.5;
                 scorePopups[s].alpha -= 0.02;
@@ -545,7 +537,7 @@
             createExplosion(player.x, player.y, '#ef4444');
             isQuizMode = true;
 
-            // KIỂM TRA ĐIỀU KIỆN CHIẾN THẮNG TUYỆT ĐỐI (Hết sạch 30 câu hỏi)
+            // Kiểm tra điều kiện thắng (Đã trả lời hết 30 câu hỏi)
             if (totalQuestionsAnswered >= 30 || localQuestionBank.length === 0) {
                 triggerGameOver(true);
                 return;
@@ -562,6 +554,7 @@
                 btn.className = 'answer-card'; btn.style.pointerEvents = 'auto';
             });
 
+            // Đặt thời gian đếm ngược thành 30 giây (YÊU CẦU MỚI)
             timeRemaining = QUIZ_TIME_LIMIT;
             updateTimerUI();
             document.getElementById('quiz-overlay').classList.add('active');
@@ -596,18 +589,15 @@
             buttons.forEach(btn => btn.style.pointerEvents = 'none');
             
             if (index === selectedQuiz.c) {
-                // TRẢ LỜI ĐÚNG: Cộng 50đ và kích hoạt chữ nổi
                 correctAnswersCount++;
                 score += 50; 
                 document.getElementById('score-value').innerText = score;
                 
-                // Thêm vào danh sách chữ nổi
                 scorePopups.push({ x: player.x, y: player.y - 30, text: "+50", alpha: 1 });
 
                 buttons[index].classList.add('correct');
                 setTimeout(() => { resumeGame(false); }, 1000);
             } else {
-                // TRẢ LỜI SAI
                 wrongAnswersCount++;
                 buttons[index].classList.add('wrong'); 
                 buttons[selectedQuiz.c].classList.add('correct');
@@ -673,11 +663,10 @@
                 ctx.save(); ctx.globalAlpha = p.alpha; ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2); ctx.fill(); ctx.restore();
             });
 
-            // Vẽ văn bản chữ nổi hiệu ứng +50đ lên màn hình canvas
             scorePopups.forEach(pop => {
                 ctx.save();
                 ctx.globalAlpha = pop.alpha;
-                ctx.fillStyle = '#22c55e';
+                ctx.fillStyle = '#10b981';
                 ctx.font = 'bold 22px Arial';
                 ctx.textAlign = 'center';
                 ctx.fillText(pop.text, pop.x, pop.y);
