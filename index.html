@@ -61,14 +61,14 @@
             height: 100%;
         }
 
-        /* Menu Bắt đầu / Chuyển ván */
+        /* Menu Bắt đầu / Chuyển Chặng / Tổng kết */
         #menu-overlay {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(5, 5, 15, 0.9);
+            background: rgba(5, 5, 15, 0.95);
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -80,23 +80,25 @@
         }
 
         #menu-title {
-            font-size: 28px;
+            font-size: 26px;
             font-weight: 800;
             color: #38bdf8;
-            margin-bottom: 10px;
+            margin-bottom: 15px;
             text-shadow: 0 0 15px rgba(56, 189, 248, 0.6);
         }
 
         #menu-report {
-            font-size: 16px;
+            font-size: 14px;
             color: #cbd5e1;
             margin-bottom: 30px;
             line-height: 1.6;
-            background: rgba(30, 41, 59, 0.5);
-            padding: 15px;
+            background: rgba(30, 41, 59, 0.6);
+            padding: 18px;
             border-radius: 8px;
             border: 1px solid #334155;
-            width: 80%;
+            width: 90%;
+            box-sizing: border-box;
+            text-align: left;
         }
 
         .primary-btn {
@@ -142,7 +144,6 @@
             margin-bottom: 5px;
         }
 
-        /* Thanh thời gian đếm ngược 45s */
         #timer-container {
             width: 100%;
             background-color: #334155;
@@ -220,14 +221,14 @@
     <div id="game-container">
         <div id="hud">
             <div class="hud-item"><div class="hud-label">Điểm</div><div id="score-value" class="hud-value">0</div></div>
-            <div class="hud-item"><div class="hud-label">Mạng</div><div id="lives-value" class="hud-value">❤️ 3</div></div>
-            <div class="hud-item"><div class="hud-label">Ván</div><div id="wave-value" class="hud-value">1</div></div>
+            <div class="hud-item"><div class="hud-label">Mạng</div><div id="lives-value" class="hud-value">❤️ 5</div></div>
+            <div class="hud-item"><div class="hud-label">Chặng</div><div id="wave-value" class="hud-value">1</div></div>
         </div>
 
         <div id="menu-overlay">
             <div id="menu-title">NĂNG LƯỢNG VŨ TRỤ KHTN 9</div>
             <div id="menu-report">Chào mừng bạn đến với thử thách Cơ học! Tránh né bầy gà tinh vân và giải mã các bài toán để bảo vệ Trái Đất.</div>
-            <button id="start-btn" class="primary-btn" onclick="startNextWave()">BẮT ĐẦU VÁN 1</button>
+            <button id="start-btn" class="primary-btn" onclick="startNextWave()">BẮT ĐẦU CHẶNG 1</button>
         </div>
 
         <canvas id="spaceCanvas"></canvas>
@@ -259,19 +260,56 @@
         canvas.width = WIDTH;
         canvas.height = HEIGHT;
 
+        // Trạng thái các biến số hệ thống game
         let score = 0;
-        let lives = 3;
+        let lives = 5; // YÊU CẦU: Khởi tạo 5 mạng sống
         let wave = 1;
         let isQuizMode = false;
-        let isMenuMode = true; // Trạng thái màn hình chờ ban đầu
+        let isMenuMode = true;
         let selectedQuiz = null;
         let lastShotTime = 0;
         const SHOT_DELAY = 220;
 
-        // Logic đếm ngược 45 giây
+        // Các biến phục vụ thống kê báo cáo
+        let gameStartTime = 0;
+        let totalElapsedSeconds = 0;
+        let correctAnswersCount = 0;
+        let wrongAnswersCount = 0;
+        let totalQuestionsAnswered = 0;
+
+        // Biến hiệu ứng chữ nổi +50đ
+        let scorePopups = [];
+
+        // Logic đếm ngược 45 giây câu hỏi
         let quizTimer = null;
         let timeRemaining = 45;
-        const QUIZ_TIME_LIMIT = 45; 
+        const QUIZ_TIME_LIMIT = 45;
+
+        // Bộ synthesizer âm thanh (Web Audio API không cần file ngoài)
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        function playExplosionSound() {
+            try {
+                // Giúp giả lập tiếng nổ "Bùm" trầm ấm bằng nhiễu âm tần số thấp
+                let bufferSize = audioCtx.sampleRate * 0.4,
+                    buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate),
+                    data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    data[i] = Math.random() * 2 - 1;
+                }
+                let noise = audioCtx.createBufferSource();
+                noise.buffer = buffer;
+                let filter = audioCtx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(400, audioCtx.currentTime);
+                filter.frequency.exponentialRampToValueAtTime(10, audioCtx.currentTime + 0.4);
+                let gain = audioCtx.createGain();
+                gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+                noise.connect(filter); filter.connect(gain); gain.connect(audioCtx.destination);
+                noise.start();
+            } catch(e) {}
+        }
 
         const physicsQuestionBank = [
             { q: "Động năng của một vật là năng lượng vật có được do yếu tố nào?", a: ["Vật có khối lượng lớn", "Vật đang ở trên cao", "Vật đang chuyển động", "Vật bị biến dạng"], c: 2 },
@@ -330,28 +368,73 @@
             player.x = Math.max(player.width/2, Math.min(WIDTH - player.width/2, (e.clientX - rect.left) * scaleX));
         });
 
-        // Hàm kích hoạt màn chơi mới từ màn hình Chờ
         function startNextWave() {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            if (gameStartTime === 0) gameStartTime = Date.now(); // Ghi nhận thời gian bắt đầu chơi thực tế
+            
             isMenuMode = false;
             document.getElementById('menu-overlay').style.display = 'none';
             spawnChickenFleet();
         }
 
+        function formatTime(seconds) {
+            let m = Math.floor(seconds / 60);
+            let s = Math.floor(seconds % 60);
+            return `${m} phút ${s} giây`;
+        }
+
         function triggerWaveComplete() {
             isMenuMode = true;
             bullets = []; eggs = [];
-            
-            document.getElementById('menu-title').innerText = `🎉 HOÀN THÀNH VÁN ${wave}!`;
+            totalElapsedSeconds = (Date.now() - gameStartTime) / 1000;
+
+            document.getElementById('menu-title').innerText = `🎉 HOÀN THÀNH CHẶNG ${wave}!`;
             document.getElementById('menu-report').innerHTML = `
-                <b>BÁO CÁO KẾT QUẢ TRẬN ĐẤU:</b><br><br>
-                - Ván đấu vừa qua: Ván ${wave}<br>
-                - Điểm số hiện tại: <span style="color:#38bdf8; font-size:18px;">${score} điểm</span><br>
-                - Số mạng còn lại: ${'❤️'.repeat(lives)}<br><br>
-                <i>Hệ thống gà chiến ván tiếp theo sẽ được nhân đôi tốc độ và đẻ trứng nhanh hơn! Sẵn sàng chưa?</i>
+                <b>BÁO CÁO TIẾN ĐỘ THỰC HIỆN:</b><br><br>
+                - Số chặng đã vượt qua: <b>Chặng ${wave}</b><br>
+                - Tổng điểm tích lũy: <span style="color:#38bdf8;">${score} điểm</span><br>
+                - Tổng thời gian đã chơi: <b>${formatTime(totalElapsedSeconds)}</b><br>
+                - Số câu trả lời ĐÚNG: <span style="color:#10b981;">${correctAnswersCount} câu</span><br>
+                - Số câu trả lời SAI: <span style="color:#ef4444;">${wrongAnswersCount} câu</span><br>
+                - Số mạng còn lại: ${'❤️'.repeat(lives)}
             `;
             wave++;
             document.getElementById('wave-value').innerText = wave;
-            document.getElementById('start-btn').innerText = `BẮT ĐẦU VÁN ${wave}`;
+            document.getElementById('start-btn').innerText = `BẮT ĐẦU CHẶNG ${wave}`;
+            document.getElementById('menu-overlay').style.display = 'flex';
+        }
+
+        function triggerGameOver(isUltimateWin = false) {
+            clearInterval(quizTimer);
+            isMenuMode = true;
+            totalElapsedSeconds = (Date.now() - gameStartTime) / 1000;
+
+            if (isUltimateWin) {
+                document.getElementById('menu-title').innerText = `🏆 XUẤT SẮC! BẠN ĐÃ CHIẾN THẮNG!`;
+            } else {
+                document.getElementById('menu-title').innerText = `💥 TRẬN ĐẤU KẾT THÚC!`;
+            }
+
+            document.getElementById('menu-report').innerHTML = `
+                <b style="color:#eab308; font-size:15px;">BÁO CÁO TỔNG KẾT TOÀN DIỆN:</b><br><br>
+                - Số chặng hoàn thành: <b>${wave - 1} chặng</b><br>
+                - Tổng số điểm đạt được: <span style="color:#38bdf8; font-size:16px; font-weight:bold;">${score} điểm</span><br>
+                - Tổng thời gian tham gia: <b>${formatTime(totalElapsedSeconds)}</b><br><br>
+                - Tổng số câu đã tương tác: <b>${totalQuestionsAnswered} câu</b><br>
+                - Trả lời ĐÚNG: <span style="color:#10b981; font-weight:bold;">${correctAnswersCount} câu</span><br>
+                - Trả lời SAI: <span style="color:#ef4444; font-weight:bold;">${wrongAnswersCount} câu</span>
+            `;
+
+            // Reset toàn bộ chỉ số cho lần chơi tiếp theo
+            score = 0; lives = 5; wave = 1;
+            correctAnswersCount = 0; wrongAnswersCount = 0; totalQuestionsAnswered = 0;
+            gameStartTime = 0;
+            localQuestionBank = [...physicsQuestionBank];
+
+            document.getElementById('score-value').innerText = score;
+            document.getElementById('wave-value').innerText = wave;
+            document.getElementById('lives-value').innerText = `❤️ 5`;
+            document.getElementById('start-btn').innerText = "CHƠI LẠI TỪ ĐẦU";
             document.getElementById('menu-overlay').style.display = 'flex';
         }
 
@@ -367,7 +450,7 @@
                         x: startX + c * spacingX, y: startY + r * spacingY,
                         width: 36, height: 32, direction: 1,
                         speed: 1.2 + (wave * 0.25),
-                        dropChance: 0.004 + (wave * 0.002) 
+                        dropChance: 0.004 + (wave * 0.002)
                     });
                 }
             }
@@ -413,8 +496,11 @@
                 eggs[e].y += eggs[e].vy;
                 if (eggs[e].y > HEIGHT) { eggs.splice(e, 1); continue; }
 
+                // Khi quả trứng va chạm trúng máy bay người chơi
                 if (Math.abs(eggs[e].x - player.x) < player.width/2 + 5 && Math.abs(eggs[e].y - player.y) < player.height/2 + 6) {
-                    eggs.splice(e, 1); triggerPlayerHit();
+                    eggs.splice(e, 1);
+                    playExplosionSound(); // YÊU CẦU: Kêu bùm khi máy bay nổ
+                    triggerPlayerHit();
                 }
             }
 
@@ -423,7 +509,8 @@
                     if (Math.abs(bullets[b].x - chickens[c].x) < chickens[c].width/2 && Math.abs(bullets[b].y - chickens[c].y) < chickens[c].height/2) {
                         createExplosion(chickens[c].x, chickens[c].y, '#10b981');
                         chickens.splice(c, 1); bullets.splice(b, 1);
-                        score += 50; document.getElementById('score-value').innerText = score;
+                        score += 20; // Bắn hạ mỗi con gà cộng 20đ nền
+                        document.getElementById('score-value').innerText = score;
                         break;
                     }
                 }
@@ -435,22 +522,38 @@
                 if(particles[p].alpha <= 0) particles.splice(p, 1);
             }
 
-            // Kết thúc ván đấu -> Chuyển sang màn hình báo cáo kết quả
+            // Xử lý chữ nổi +50đ bay lên
+            for (let s = scorePopups.length - 1; s >= 0; s--) {
+                scorePopups[s].y -= 1.5;
+                scorePopups[s].alpha -= 0.02;
+                if (scorePopups[s].alpha <= 0) scorePopups.splice(s, 1);
+            }
+
             if (chickens.length === 0) { 
                 triggerWaveComplete(); 
             }
             
-            chickens.forEach(chick => { if (chick.y + chick.height/2 > player.y - player.height/2) triggerPlayerHit(); });
+            chickens.forEach(chick => { 
+                if (chick.y + chick.height/2 > player.y - player.height/2) {
+                    playExplosionSound();
+                    triggerPlayerHit();
+                }
+            });
         }
 
         function triggerPlayerHit() {
             createExplosion(player.x, player.y, '#ef4444');
             isQuizMode = true;
 
-            if (localQuestionBank.length === 0) localQuestionBank = [...physicsQuestionBank];
+            // KIỂM TRA ĐIỀU KIỆN CHIẾN THẮNG TUYỆT ĐỐI (Hết sạch 30 câu hỏi)
+            if (totalQuestionsAnswered >= 30 || localQuestionBank.length === 0) {
+                triggerGameOver(true);
+                return;
+            }
 
             const randomIndex = Math.floor(Math.random() * localQuestionBank.length);
             selectedQuiz = localQuestionBank.splice(randomIndex, 1)[0];
+            totalQuestionsAnswered++;
 
             document.getElementById('question-box').innerText = selectedQuiz.q;
             const buttons = document.querySelectorAll('.answer-card');
@@ -459,7 +562,6 @@
                 btn.className = 'answer-card'; btn.style.pointerEvents = 'auto';
             });
 
-            // Khởi động bộ đếm thời gian 45 giây
             timeRemaining = QUIZ_TIME_LIMIT;
             updateTimerUI();
             document.getElementById('quiz-overlay').classList.add('active');
@@ -467,10 +569,10 @@
             quizTimer = setInterval(() => {
                 timeRemaining--;
                 updateTimerUI();
-
                 if (timeRemaining <= 0) {
                     clearInterval(quizTimer);
-                    handleTimeOut(); // Xử lý khi hết giờ
+                    wrongAnswersCount++;
+                    handleTimeOut();
                 }
             }, 1000);
         }
@@ -481,27 +583,34 @@
             document.getElementById('timer-bar').style.width = `${percentage}%`;
         }
 
-        // Xử lý khi học sinh bị hết 45 giây suy nghĩ
         function handleTimeOut() {
             const buttons = document.querySelectorAll('.answer-card');
             buttons.forEach(btn => btn.style.pointerEvents = 'none');
-            buttons[selectedQuiz.c].classList.add('correct'); // Hiện đáp án đúng
-            
-            setTimeout(() => {
-                resumeGame(true); // Trừ 1 mạng
-            }, 2000);
+            buttons[selectedQuiz.c].classList.add('correct');
+            setTimeout(() => { resumeGame(true); }, 2000);
         }
 
         function submitAnswer(index) {
-            clearInterval(quizTimer); // Dừng đếm ngược ngay khi bấm chọn
+            clearInterval(quizTimer);
             const buttons = document.querySelectorAll('.answer-card');
             buttons.forEach(btn => btn.style.pointerEvents = 'none');
             
             if (index === selectedQuiz.c) {
+                // TRẢ LỜI ĐÚNG: Cộng 50đ và kích hoạt chữ nổi
+                correctAnswersCount++;
+                score += 50; 
+                document.getElementById('score-value').innerText = score;
+                
+                // Thêm vào danh sách chữ nổi
+                scorePopups.push({ x: player.x, y: player.y - 30, text: "+50", alpha: 1 });
+
                 buttons[index].classList.add('correct');
                 setTimeout(() => { resumeGame(false); }, 1000);
             } else {
-                buttons[index].classList.add('wrong'); buttons[selectedQuiz.c].classList.add('correct');
+                // TRẢ LỜI SAI
+                wrongAnswersCount++;
+                buttons[index].classList.add('wrong'); 
+                buttons[selectedQuiz.c].classList.add('correct');
                 setTimeout(() => { resumeGame(true); }, 2000);
             }
         }
@@ -510,18 +619,8 @@
             if (deductLife) {
                 lives--;
                 if(lives <= 0) {
-                    alert(`TRẬN ĐẤU KẾT THÚC! Bạn đạt được: ${score} điểm.`);
-                    score = 0; lives = 3; wave = 1;
-                    localQuestionBank = [...physicsQuestionBank];
-                    document.getElementById('score-value').innerText = score;
-                    document.getElementById('wave-value').innerText = wave;
-                    
-                    // Quay về màn hình chờ ban đầu
-                    isMenuMode = true;
-                    document.getElementById('menu-title').innerText = "NĂNG LƯỢNG VŨ TRỤ KHTN 9";
-                    document.getElementById('menu-report').innerText = "Chào mừng bạn đến với thử thách Cơ học! Tránh né bầy gà tinh vân và giải mã các bài toán để bảo vệ Trái Đất.";
-                    document.getElementById('start-btn').innerText = "BẮT ĐẦU VÁN 1";
-                    document.getElementById('menu-overlay').style.display = 'flex';
+                    triggerGameOver(false);
+                    return;
                 }
             }
             document.getElementById('lives-value').innerText = `❤️ ${lives}`;
@@ -573,10 +672,21 @@
             particles.forEach(p => {
                 ctx.save(); ctx.globalAlpha = p.alpha; ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2); ctx.fill(); ctx.restore();
             });
+
+            // Vẽ văn bản chữ nổi hiệu ứng +50đ lên màn hình canvas
+            scorePopups.forEach(pop => {
+                ctx.save();
+                ctx.globalAlpha = pop.alpha;
+                ctx.fillStyle = '#22c55e';
+                ctx.font = 'bold 22px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(pop.text, pop.x, pop.y);
+                ctx.restore();
+            });
         }
 
         function mainLoop() { update(); draw(); requestAnimationFrame(mainLoop); }
-        mainLoop(); // Chỉ chạy vòng lặp, màn hình chờ sẽ quản lý việc bắt đầu
+        mainLoop();
     </script>
 </body>
 </html>
